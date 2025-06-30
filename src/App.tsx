@@ -13,42 +13,116 @@ import {
   Edit3,
   Trash2,
   AlignCenter,
-  AlignLeft,
   RefreshCw,
   Zap,
   Award,
   Bold,
   Italic,
   Link,
-  Type,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "./App.css";
 
-const App = () => {
-  const [projectPlan, setProjectPlan] = useState("");
-  const [readmeContent, setReadmeContent] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [hasCopied, setHasCopied] = useState(false);
-  const [viewMode, setViewMode] = useState("preview");
-  const [showOptions, setShowOptions] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+// Type definitions
+interface Options {
+  includeBadges: boolean;
+  animatedText: boolean;
+  separateBadges: boolean;
+  includeTableOfContents: boolean;
+  includeDemoSection: boolean;
+  includeScreenshots: boolean;
+  includeApiDocs: boolean;
+  includeDeployment: boolean;
+  includeContributing: boolean;
+  includeLicense: boolean;
+  includeAcknowledgments: boolean;
+  includeChangelog: boolean;
+  badgeStyle: string;
+  emojiStyle: string;
+  centerContent: boolean;
+  iconBadges: boolean;
+  animationColor: string;
+  animationSpeed: string;
+  animationFont: string;
+}
 
-  const [editChanges, setEditChanges] = useState({
+interface Section {
+  id: string;
+  title: string;
+  fullTitle: string;
+  content: string;
+  startLine: number;
+  type: string;
+}
+
+interface EditChanges {
+  removedSections: string[];
+  centeredSections: string[];
+  textEdits: Record<string, string>;
+  inlineFormats: Record<string, any[]>;
+  sectionAlignments: Record<string, string>;
+  badgeUpdates: Record<string, any>;
+  animationUpdates: Record<string, any>;
+}
+
+interface BadgeConfig {
+  addBadges: boolean;
+  badgeStyle: string;
+}
+
+interface AnimationConfig {
+  addAnimation: boolean;
+  animationColor: string;
+}
+
+interface SectionSettings {
+  centered: boolean;
+  badges: {
+    enabled: boolean;
+    style: string;
+  };
+  animation: {
+    enabled: boolean;
+    color: string;
+  };
+}
+
+interface SelectedText {
+  start: number;
+  end: number;
+  text: string;
+}
+
+interface EditablePreviewProps {
+  content: string;
+  onSectionEdit: (sectionId: string, action: string, value?: any) => void;
+  editChanges: EditChanges;
+}
+
+const App: React.FC = () => {
+  const [projectPlan, setProjectPlan] = useState<string>("");
+  const [readmeContent, setReadmeContent] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [hasCopied, setHasCopied] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<string>("preview");
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  const [editChanges, setEditChanges] = useState<EditChanges>({
     removedSections: [],
     centeredSections: [],
     textEdits: {},
-    inlineFormats: {}, // New: stores inline formatting for each section
+    inlineFormats: {},
     sectionAlignments: {},
     badgeUpdates: {},
     animationUpdates: {},
   });
 
-  const [options, setOptions] = useState({
+  const [options, setOptions] = useState<Options>({
     includeBadges: true,
     animatedText: false,
     separateBadges: false,
@@ -110,7 +184,7 @@ License: MIT
     let styleInstructions = "";
 
     if (options.includeBadges) {
-      const badgeStyleMap = {
+      const badgeStyleMap: Record<string, string> = {
         flat: "flat",
         "flat-square": "flat-square",
         "for-the-badge": "for-the-badge",
@@ -146,7 +220,7 @@ License: MIT
         'Wrap main sections (title, description, badges, key content) in <div align="center"> tags for center alignment. Use <p align="center"> for paragraphs that should be centered.\n';
     }
 
-    const emojiMap = {
+    const emojiMap: Record<string, string> = {
       none: "",
       subtle: "Add subtle emojis (1-2 per section header, like 🚀 ✨ 📦 🛠️)",
       heavy:
@@ -319,18 +393,18 @@ License: MIT
       });
   };
 
-  const handleOptionChange = (key, value) => {
+  const handleOptionChange = (key: keyof Options, value: any) => {
     setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
-  const parseMarkdownSections = (content) => {
+  const parseMarkdownSections = (content: string): Section[] => {
     if (!content) return [];
 
-    const sections = [];
+    const sections: Section[] = [];
     const lines = content.split("\n");
-    let currentSection = null;
+    let currentSection: Section | null = null;
 
-    lines.forEach((line, index) => {
+    lines.forEach((line: string, index: number) => {
       if (line.startsWith("#")) {
         if (currentSection) {
           sections.push(currentSection);
@@ -369,7 +443,11 @@ License: MIT
     return sections;
   };
 
-  const handleSectionEdit = (sectionId, action, value = null) => {
+  const handleSectionEdit = (
+    sectionId: string,
+    action: string,
+    value: any = null
+  ) => {
     const section = parseMarkdownSections(readmeContent).find(
       (s) => s.id === sectionId
     );
@@ -462,8 +540,9 @@ License: MIT
       changeInstructions += `\nBADGE UPDATES:`;
       Object.entries(editChanges.badgeUpdates).forEach(
         ([section, badgeConfig]) => {
-          if (badgeConfig.addBadges) {
-            changeInstructions += `\n- Add relevant badges to "${section}" section using ${badgeConfig.badgeStyle} style from shields.io. Include tech stack and status badges.`;
+          const typedBadgeConfig = badgeConfig as BadgeConfig;
+          if (typedBadgeConfig.addBadges) {
+            changeInstructions += `\n- Add relevant badges to "${section}" section using ${typedBadgeConfig.badgeStyle} style from shields.io. Include tech stack and status badges.`;
           }
         }
       );
@@ -473,9 +552,10 @@ License: MIT
       changeInstructions += `\nANIMATION UPDATES:`;
       Object.entries(editChanges.animationUpdates).forEach(
         ([section, animConfig]) => {
-          if (animConfig.addAnimation) {
+          const typedAnimConfig = animConfig as AnimationConfig;
+          if (typedAnimConfig.addAnimation) {
             changeInstructions += `\n- Add animated typing text to "${section}" section header using: <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=1000&color=${
-              animConfig.animationColor
+              typedAnimConfig.animationColor
             }&center=true&vCenter=true&width=435&lines=${section.replace(
               /\s+/g,
               "+"
@@ -807,7 +887,7 @@ License: MIT
                             }
                             placeholder="36BCF7"
                             className="color-input"
-                            maxLength="6"
+                            maxLength={6}
                           />
                         </div>
                         <div className="color-presets">
@@ -1021,30 +1101,34 @@ License: MIT
   );
 };
 
-const EditablePreview = ({ content, onSectionEdit, editChanges }) => {
-  const [editingSection, setEditingSection] = useState(null);
-  const [editText, setEditText] = useState("");
-  const [selectedText, setSelectedText] = useState({
+const EditablePreview: React.FC<EditablePreviewProps> = ({
+  content,
+  onSectionEdit,
+  editChanges,
+}) => {
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>("");
+  const [selectedText, setSelectedText] = useState<SelectedText>({
     start: 0,
     end: 0,
     text: "",
   });
-  const [sectionSettings, setSectionSettings] = useState({
+  const [sectionSettings, setSectionSettings] = useState<SectionSettings>({
     centered: false,
     badges: { enabled: false, style: "for-the-badge" },
     animation: { enabled: false, color: "36BCF7" },
   });
 
-  const textareaRef = useRef(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const sections = React.useMemo(() => {
     if (!content) return [];
 
     const lines = content.split("\n");
-    const sectionList = [];
-    let currentSection = null;
+    const sectionList: Section[] = [];
+    let currentSection: Section | null = null;
 
-    lines.forEach((line, index) => {
+    lines.forEach((line: string, index: number) => {
       if (line.startsWith("#")) {
         if (currentSection) {
           sectionList.push(currentSection);
@@ -1098,7 +1182,10 @@ const EditablePreview = ({ content, onSectionEdit, editChanges }) => {
   };
 
   // Apply formatting to selected text
-  const applyInlineFormatting = (type, options = {}) => {
+  const applyInlineFormatting = (
+    type: string,
+    options: Record<string, any> = {}
+  ) => {
     if (!selectedText.text || !textareaRef.current) return;
 
     const textarea = textareaRef.current;
@@ -1149,26 +1236,31 @@ const EditablePreview = ({ content, onSectionEdit, editChanges }) => {
     setSelectedText({ start: 0, end: 0, text: "" });
   };
 
-  const handleEditClick = (section) => {
+  const handleEditClick = (section: Section) => {
     setEditingSection(section.id);
     setEditText(section.content);
     setSelectedText({ start: 0, end: 0, text: "" });
 
     // Initialize section settings based on current state
+    const badgeConfig = editChanges.badgeUpdates[section.title] as BadgeConfig;
+    const animConfig = editChanges.animationUpdates[
+      section.title
+    ] as AnimationConfig;
+
     setSectionSettings({
       centered: editChanges.centeredSections.includes(section.title),
-      badges: editChanges.badgeUpdates[section.title] || {
-        enabled: false,
-        style: "for-the-badge",
+      badges: {
+        enabled: badgeConfig?.addBadges || false,
+        style: badgeConfig?.badgeStyle || "for-the-badge",
       },
-      animation: editChanges.animationUpdates[section.title] || {
-        enabled: false,
-        color: "36BCF7",
+      animation: {
+        enabled: animConfig?.addAnimation || false,
+        color: animConfig?.animationColor || "36BCF7",
       },
     });
   };
 
-  const handleSaveEdit = (section) => {
+  const handleSaveEdit = (section: Section) => {
     // Save text changes
     onSectionEdit(section.id, "edit-text", editText);
 
@@ -1453,7 +1545,7 @@ const EditablePreview = ({ content, onSectionEdit, editChanges }) => {
                               }))
                             }
                             className="mini-color-input"
-                            maxLength="6"
+                            maxLength={6}
                             placeholder="36BCF7"
                           />
                         </div>
